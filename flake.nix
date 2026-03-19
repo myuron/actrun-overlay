@@ -7,8 +7,10 @@
 
     devshell.url = "github:numtide/devshell";
     moonbit-overlay.url = "github:moonbit-community/moonbit-overlay";
-    actrun.url = "github:mizchi/actrun";
-  };
+    actrun = {
+      url = "github:mizchi/actrun";
+      flake = false;
+    };
 
   outputs = inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
