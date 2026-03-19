@@ -11,6 +11,10 @@
       url = "github:mizchi/actrun";
       flake = false;
     };
+    moon-registry = {
+      url = "github:moonbitlang/mooncakes.io-index";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ flake-parts, ... }:
@@ -18,6 +22,25 @@
       imports = [
         inputs.devshell.flakeModule
       ];
+
+      systems = [
+        "x86_64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
+
+      flake = {
+        overlays.default = final: prev: {
+          actrun = final.moonPlatform.buildMoonPackage {
+            name = "actrun";
+            src = inputs.actrun;
+            version = "0.1.0";
+            moonModJson = "${inputs.actrun}/moon.mod.json";
+            moonRegistryIndex = inputs.moon-registry;
+            moonFlags = [ "--release" "--target" "native" ];
+          };
+        };
+      };
 
       perSystem = { inputs', system, pkgs, ... }: {
         _module.args.pkgs = import inputs.nixpkgs {
@@ -30,34 +53,15 @@
           src = inputs.actrun;
           version = "0.1.0";
           moonModJson = "${inputs.actrun}/moon.mod.json";
-          moonRegistoryIndex = inputs.moon-registry;
+          moonRegistryIndex = inputs.moon-registry;
           moonFlags = [ "--release" "--target" "native" ];
         };
 
-        flake = {
-          overlays.default = final: prev: {
-            actrun = final.moonPlatform.buildMoonPackage {
-              name = "actrun";
-              src = inputs.actrun-src;
-              version = "0.1.0";
-              moonModJson = "${inputs.actrun}/moon.mod.json";
-              moonRegistryIndex = inputs.moon-registry;
-              moonFlags = [ "--release" "--target" "native" ];
-            };
-          };
-        };
-
         devshells.default = {
-            packages = with pkgs; [
-              moonbit-bin.moonbit.latest
-            ];
-          };
+          packages = with pkgs; [
+            moonbit-bin.moonbit.latest
+          ];
+        };
       };
-
-      systems = [
-        "x86_64-linux"
-        "aarch64-darwin"
-        "x86_64-darwin"
-      ];
     };
 }
