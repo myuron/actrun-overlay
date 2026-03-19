@@ -1,22 +1,22 @@
 # actrun-overlay
 
-[actrun](https://github.com/mizchi/actrun) を Nix でビルドするための Flake overlay。
-[moonbit-overlay](https://github.com/moonbit-community/moonbit-overlay) のバグを修正したパッチ版 Nix モジュールを含みます。
+A Nix Flake overlay for building [actrun](https://github.com/mizchi/actrun) with Nix.
+Includes patched Nix modules that fix bugs in [moonbit-overlay](https://github.com/moonbit-community/moonbit-overlay).
 
-## 修正内容
+## Bug Fixes
 
-`moonbit-overlay` に対する以下のバグ修正を含みます:
+This overlay includes the following bug fixes for `moonbit-overlay`:
 
-- **listAllDependencies.nix** — `head.name` を `"${head.name}"` に修正（Nix の属性キー構文バグ）、および name+version での重複排除
-- **buildCachedRegistry.nix** — `cp -n`（上書きなし）によるファイル競合の回避
-- **bundleWithRegistry.nix** — `--source-dir` を `--target-dir` に変更（新しい moon CLI への対応）
-- **buildMoonPackage.nix** — ビルド出力ディレクトリを `target/` から `_build/` に変更
+- **listAllDependencies.nix** — Fixed `head.name` to `"${head.name}"` (Nix attribute key syntax bug), and added deduplication by name+version
+- **buildCachedRegistry.nix** — Avoided file conflicts by using `cp -n` (no-clobber)
+- **bundleWithRegistry.nix** — Changed `--source-dir` to `--target-dir` (compatibility with newer moon CLI)
+- **buildMoonPackage.nix** — Changed build output directory from `target/` to `_build/`
 
-## 使い方
+## Usage
 
-### Overlay として利用する
+### As an Overlay
 
-`flake.nix` に以下のように設定します:
+Add the following to your `flake.nix`:
 
 ```nix
 {
@@ -30,7 +30,7 @@
 
   outputs = { nixpkgs, actrun-overlay, ... }:
     let
-      system = "x86_64-linux"; # または "aarch64-darwin"
+      system = "x86_64-linux"; # or "aarch64-darwin"
       pkgs = import nixpkgs {
         inherit system;
         overlays = [
@@ -41,10 +41,10 @@
       };
     in
     {
-      # パッケージとして利用
+      # Use as a package
       packages.${system}.default = pkgs.actrun;
 
-      # devShell で利用
+      # Use in a devShell
       devShells.${system}.default = pkgs.mkShell {
         packages = [ pkgs.actrun ];
       };
@@ -52,9 +52,9 @@
 }
 ```
 
-### 直接パッケージとして利用する
+### As a Direct Package Reference
 
-overlay を使わず、直接参照することもできます:
+You can also reference the package directly without using an overlay:
 
 ```nix
 {
@@ -80,17 +80,17 @@ overlay を使わず、直接参照することもできます:
 }
 ```
 
-### `nix run` で直接実行する
+### Run Directly with `nix run`
 
 ```bash
 nix run github:myuron/actrun-overlay
 ```
 
-## 対応プラットフォーム
+## Supported Platforms
 
 - `x86_64-linux`
 - `aarch64-darwin`
 
-## ライセンス
+## License
 
-actrun 本体は [Apache-2.0](https://github.com/mizchi/actrun/blob/main/LICENSE) ライセンスです。
+actrun itself is licensed under [Apache-2.0](https://github.com/mizchi/actrun/blob/main/LICENSE).
