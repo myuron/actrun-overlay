@@ -6,7 +6,7 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "0.20.3";
+      version = "0.21.3";
 
       sources = {
         x86_64-linux = {
@@ -15,7 +15,7 @@
         };
         aarch64-darwin = {
           url = "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-macos-arm64.tar.gz";
-          hash = "sha256-13/zMfczNhVUQJ2oMQWIy2RA7FD8w=";
+          hash = "sha256-13/zMfczNPtE0Lh9iWy9V3UtQQJJ2oMQWIy2RA7FD8w=";
         };
       };
 
