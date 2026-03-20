@@ -6,7 +6,7 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "0.20.3";
+      version = "0.21.3";
 
       sources = {
         x86_64-linux = {
