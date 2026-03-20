@@ -1,0 +1,64 @@
+name: Update actrun version
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current version from flake.nix
+        id: current
+        run: |
+          version=$(grep 'version = ' flake.nix | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest release version
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh api repos/mizchi/actrun/releases/latest --jq '.tag_name')
+          version="${tag#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update is needed
+        id: check
+        run: |
+          if [ "${{ steps.current.outputs.version }}" = "${{ steps.latest.outputs.version }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        if: steps.check.outputs.skip == 'false'
+
+      - name: Update version and hashes
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          version="${{ steps.latest.outputs.version }}"
+
+          linux_hash=$(nix-prefetch-url "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-linux-x64.tar.gz" 2>/dev/null | xargs nix hash convert --to sri --hash-algo sha256)
+          macos_hash=$(nix-prefetch-url "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-macos-arm64.tar.gz" 2>/dev/null | xargs nix hash convert --to sri --hash-algo sha256)
+
+          sed -i "s/version = \".*\"/version = \"${version}\"/" flake.nix
+
+          sed -i "0,/hash = \"sha256-.*\"/s|hash = \"sha256-.*\"|hash = \"${linux_hash}\"|" flake.nix
+          sed -i "/macos-arm64/{n;s|hash = \"sha256-.*\"|hash = \"${macos_hash}\"|}" flake.nix
+
+      - name: Create Pull Request
+        if: steps.check.outputs.skip == 'false'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "Update actrun to v${{ steps.latest.outputs.version }}"
+          body: "Automated update of actrun from v${{ steps.current.outputs.version }} to v${{ steps.latest.outputs.version }}"
+          branch: update-actrun-${{ steps.latest.outputs.version }}
+          commit-message: "chore: update actrun to v${{ steps.latest.outputs.version }}"

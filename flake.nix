@@ -1,109 +1,64 @@
 {
-  inputs = {
-    flake-parts = {
-      url = "github:hercules-ci/flake-parts";
-    };
+  description = "Nix overlay for actrun";
 
-    nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-unstable";
-    };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
-    moonbit-overay = {
-      url = "github:moonbit-community/moonbit-overlay";
-    };
+  outputs =
+    { self, nixpkgs }:
+    let
+      version = "0.21.3";
 
-    moon-registry = {
-      url = "git+https://mooncakes.io/git/index";
-      flake = false;
-    };
-  };
+      sources = {
+        x86_64-linux = {
+          url = "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-linux-x64.tar.gz";
+          hash = "sha256-pdK1Khe5FeEkkLJWJNQ2+SHlLxH34yi8Ndai79zR69Q=";
+        };
+        aarch64-darwin = {
+          url = "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-macos-arm64.tar.gz";
+          hash = "sha256-13/zMfczNPtE0Lh9iWy9V3UtQQJJ2oMQWIy2RA7FD8w=";
+        };
+      };
 
-  outputs = inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      perSystem = { inputs', system, pkgs, ... }:
+      supportedSystems = builtins.attrNames sources;
+
+      mkActrun =
+        pkgs:
         let
-          moonbitSrc = inputs.moonbit-overay;
-
-          # Reconstruct moonPlatform with patched listAllDependencies
-          # Workaround for https://github.com/moonbit-community/moonbit-overlay
-          # dedup bug in listAllDependencies.nix (head.name vs "${head.name}")
-          versions = import "${moonbitSrc}/versions.nix" pkgs.lib;
-          inherit (import "${moonbitSrc}/lib/utils.nix" { inherit (pkgs) stdenv lib; })
-            mkToolChainsUri mkCoreUri target;
-
-          moon-patched = pkgs.callPackage "${moonbitSrc}/lib/moon-patched" {
-            rev = versions.latest.moonRev;
-            hash = versions.latest.moonHash;
-          };
-
-          toolchains = pkgs.callPackage "${moonbitSrc}/lib/toolchains.nix" {
-            version = "latest";
-            inherit moon-patched;
-            url = mkToolChainsUri "latest";
-            hash = versions.latest."${target}-toolchainsHash";
-          };
-
-          core = pkgs.callPackage "${moonbitSrc}/lib/core.nix" {
-            version = "latest";
-            url = mkCoreUri "latest";
-            hash = versions.latest.coreHash;
-          };
-
-          parseMoonIndex = import "${moonbitSrc}/lib/moonPlatform/parseMoonIndex.nix" {
-            inherit (pkgs) lib;
-          };
-
-          listAllDependencies = import ./nix/listAllDependencies.nix {
-            inherit parseMoonIndex;
-            inherit (pkgs) lib;
-          };
-
-          fetchMoonPackage = import "${moonbitSrc}/lib/moonPlatform/fetchMoonPackage.nix" {
-            inherit (pkgs) fetchurl;
-          };
-
-          buildCachedRegistry = import ./nix/buildCachedRegistry.nix {
-            inherit (pkgs) lib stdenv;
-            inherit fetchMoonPackage listAllDependencies;
-          };
-
-          bundleWithRegistry = import ./nix/bundleWithRegistry.nix {
-            inherit (pkgs) symlinkJoin makeWrapper;
-            inherit toolchains core;
-          };
-
-          buildMoonPackage = import ./nix/buildMoonPackage.nix {
-            inherit (pkgs) lib stdenv;
-            inherit buildCachedRegistry bundleWithRegistry;
-          };
-          actrunSrc = inputs'.actrun or (pkgs.fetchFromGitHub {
-            owner = "mizchi";
-            repo = "actrun";
-            rev = "v0.2.1";
-            hash = "sha256-broIRto8qQvHizm1JF8uVTjJuyZWLP73qkLQGaZGOJU=";
-          });
+          src = sources.${pkgs.stdenv.hostPlatform.system} or (throw "Unsupported system: ${pkgs.stdenv.hostPlatform.system}");
         in
-        {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
+        pkgs.stdenv.mkDerivation {
+          pname = "actrun";
+          inherit version;
+
+          src = pkgs.fetchurl {
+            inherit (src) url hash;
           };
 
-          packages.default = buildMoonPackage {
-            name = "actrun";
-            src = actrunSrc;
-            version = "0.2.1";
-            moonModJson = "${actrunSrc}/moon.mod.json";
-            moonRegistryIndex = inputs.moon-registry;
-            moonFlags = [ "--release" "--target" "native" ];
-            installPhase = ''
-              mkdir -p $out/bin
-              cp $TMP/_build/native/release/build/cmd/actrun/actrun.exe $out/bin/actrun
-            '';
+          sourceRoot = ".";
+
+          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+
+          installPhase = ''
+            install -Dm755 actrun $out/bin/actrun
+          '';
+
+          meta = {
+            description = "Run GitHub Actions locally";
+            homepage = "https://github.com/mizchi/actrun";
+            platforms = supportedSystems;
           };
         };
-      systems = [
-        "x86_64-linux"
-        "aarch64-darwin"
-      ];
+
+      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f nixpkgs.legacyPackages.${system});
+    in
+    {
+      overlays.default = _final: prev: {
+        actrun = mkActrun prev;
+      };
+
+      packages = forAllSystems (pkgs: {
+        default = mkActrun pkgs;
+        actrun = mkActrun pkgs;
+      });
     };
 }
