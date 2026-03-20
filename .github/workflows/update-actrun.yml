@@ -60,8 +60,8 @@ jobs:
 
           sed -i "0,/version = \".*\";/s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
 
-          sed -i "/x86_64-linux/,/};/{s|hash = \"sha256-.*\"|hash = \"${linux_hash}\"|}" flake.nix
-          sed -i "/aarch64-darwin/,/};/{s|hash = \"sha256-.*\"|hash = \"${macos_hash}\"|}" flake.nix
+          sed -i "/x86_64-linux/,/};/{s|hash = \".*\"|hash = \"${linux_hash}\"|}" flake.nix
+          sed -i "/aarch64-darwin/,/};/{s|hash = \".*\"|hash = \"${macos_hash}\"|}" flake.nix
 
       - name: Create Pull Request
         if: steps.check.outputs.skip == 'false'
