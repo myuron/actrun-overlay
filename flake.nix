@@ -36,7 +36,7 @@
 
           sourceRoot = ".";
 
-          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
 
           installPhase = ''
             install -Dm755 actrun $out/bin/actrun
@@ -56,9 +56,15 @@
         actrun = mkActrun prev;
       };
 
-      packages = forAllSystems (pkgs: {
-        default = mkActrun pkgs;
-        actrun = mkActrun pkgs;
-      });
+      packages = forAllSystems (
+        pkgs:
+        let
+          pkg = mkActrun pkgs;
+        in
+        {
+          default = pkg;
+          actrun = pkg;
+        }
+      );
     };
 }
