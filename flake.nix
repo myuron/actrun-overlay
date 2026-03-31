@@ -6,16 +6,16 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "0.23.0";
+      version = "0.27.0";
 
       sources = {
         x86_64-linux = {
           url = "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-linux-x64.tar.gz";
-          hash = "sha256-qysWbBgqLHqd1AVZ+k2ilctJB/owUGQMCJ6jLuHffsg=";
+          hash = "sha256-aq/mCYT0aV+WQTuSqbAmlXKP0yj7miCka/Acb8Dp4zw=";
         };
         aarch64-darwin = {
           url = "https://github.com/mizchi/actrun/releases/download/v${version}/actrun-macos-arm64.tar.gz";
-          hash = "sha256-bgYeq+0+PudTXX4ojVwbyPaB1S0aocl7itLKCwoEpG8=";
+          hash = "sha256-4wx3eNUU6Aw1tzHcuB8OH9AKDR3PVqNeTbhaVijX0jo=";
         };
       };
 
